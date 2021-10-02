@@ -30,6 +30,7 @@ L2:
     .data
 
 origine:
+    .align 2
     .string	"initiations\n"
     .equ    len,. - origine
 
