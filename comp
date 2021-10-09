@@ -1,0 +1,6 @@
+#:/bin.sh
+pgm=$1
+riscv64-linux-gnu-as -march=rv32i -mabi=ilp32 -o $pgm.o -a $pgm.s
+riscv64-linux-gnu-ld -melf32lriscv_ilp32 -o $pgm $pgm.o
+riscv64-linux-gnu-objcopy -O ihex $pgm $pgm.hex
+./readhex.py    $pgm.hex
