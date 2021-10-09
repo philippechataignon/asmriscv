@@ -46,7 +46,7 @@ def exec(pgm, start):
         # test (B)
         elif (op == 0b1100011):
             val = (rd >> 1) + ((f7 & 0b111111) << 4) # bits 1:10
-            if rd % 2 == 1: # bit 11 set
+            if rd & 1 == 1: # bit 11 set
                 val |= (1 << 10)
             if val & (1 << 6): # bit 12 set
                 val |= (1 << 11)
@@ -62,7 +62,7 @@ def exec(pgm, start):
         # jal (J)
         elif (op == 0b1101111):
             val = (f3 + (r1 << 3)) << 12 # bits 12-19
-            if r2 % 1:
+            if r2 & 1:
                 val |= (1 << 11) # bit 11
             val += (r2 & 0b11110) + ((f7 & 0b111111) << 5) # bits 1-10
             if f7 & (1 << 6):
