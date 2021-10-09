@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 from intelhex import IntelHex
 
+def extsgn(x, n = 12):
+    if x > (1 << (n - 1)) - 1:
+        x = x - (1 << n)
+    return x
+
 def exec(pgm, start):
     if len(pgm) % 4 != 0:
         print("Pgm must be 32 bits aligned")
@@ -9,51 +14,52 @@ def exec(pgm, start):
     for addr in range(0, len(pgm), 4):
         instr = (pgm[addr + 3] << 24) + (pgm[addr + 2] << 16) + (pgm[addr + 1] << 8) + pgm[addr]
         # print(hex(start + addr), hex(instr), bin(instr))
-        op = (instr & 0b00000000000000000000000001111111) >> 0
-        rd = (instr & 0b00000000000000000000111110000000) >> 7
-        f3 = (instr & 0b00000000000000000111000000000000) >> 12
-        r1 = (instr & 0b00000000000011111000000000000000) >> 15
-        r2 = (instr & 0b00000001111100000000000000000000) >> 20
-        f7 = (instr & 0b11111110000000000000000000000000) >> 25
+        op = (instr      ) & 0b1111111
+        rd = (instr >> 7 ) & 0b11111
+        f3 = (instr >> 12) & 0b111
+        r1 = (instr >> 15) & 0b11111
+        r2 = (instr >> 20) & 0b11111
+        f7 = (instr >> 25) & 0b1111111
 
         # print(f"op={bin(op)}, f3={hex(f3)}, f7={hex(f7)}, rd={rd}, r1={r1}, r2={r2}")
 
-        # arith
+        # arith (R)
         if (op == 0b0110011):
             if f3 == 0x0 and f7 == 0x00:
                 print(f"add r{rd} <- r{r1} + r{r2}")
-        # arith imm
+        # arith imm (I)
         elif (op == 0b0010011):
             if f3 == 0x0:
-                val = r2 + (f7 << 5)
+                val = instr >> 20
+                val = extsgn(val)
                 print(f"addi r{rd} <- r{r1} + {hex(val)}")
-        # load
+        # load (I)
         elif (op == 0b0000011):
-            val = instr & (1 << 12)
+            val = instr >> 20
+            val = extsgn(val)
             print(f"load{f3} r{rd} <- {val}(r{r1})")
-        # store
+        # store (S)
         elif (op == 0b0100011):
             val = rd + (f7 << 5)
-            if val > 2047:
-                val -= 4096
+            val = extsgn(val)
             print(f"store{f3} r{r2} -> {val}(r{r1})")
-        # test
+        # test (B)
         elif (op == 0b1100011):
             val = (rd >> 1) + ((f7 & 0b111111) << 4) # bits 1:10
             if rd % 2 == 1: # bit 11 set
-                val += (1 << 10)
+                val |= (1 << 10)
             if val & (1 << 6): # bit 12 set
                 val |= (1 << 11)
-            if val > 2047:
-                val -= 4096
-            val = val << 1
+            val = extsgn(val, 12)
+            val = val << 1 # bit 0 is always 0
             print(f"br{f3} r{r1} <-> r{r2} PC + {hex(val)}")
-        # jalr
+        # jalr (I)
         elif (op == 0b1100111):
             if f3 == 0x0:
-                val = r2 + (f7 << 5)
+                val = instr >> 20
+                val = extsgn(val)
                 print(f"jalr r{rd} = PC+4, PC = r{r1} + {hex(val)}")
-        # jal
+        # jal (J)
         elif (op == 0b1101111):
             val = (f3 + (r1 << 3)) << 12 # bits 12-19
             if r2 % 1:
@@ -61,10 +67,14 @@ def exec(pgm, start):
             val += (r2 & 0b11110) + ((f7 & 0b111111) << 5) # bits 1-10
             if f7 & (1 << 6):
                 val |= (1 << 20) # bit 20
-            print(f"jal r{rd} = PC+4, PC = r{r1} + {hex(val)}")
-        # auipc
+            print(f"jal r{rd} = PC + 4, PC += {hex(val)}")
+        # lui (U)
+        elif (op == 0b0110111):
+            val = (instr >> 12) << 12
+            print(f"lui r{rd} <- {hex(val)}")
+        # auipc (U)
         elif (op == 0b0010111):
-            val = instr & (1 << 12)
+            val = (instr >> 12) << 12
             print(f"auipc r{rd} <- PC + {hex(val)}")
         else:
             print(f"Unknown op={bin(op)}, f3={hex(f3)}, f7={hex(f7)}, rd={rd}, r1={r1}, r2={r2}")
