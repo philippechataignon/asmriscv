@@ -53,6 +53,15 @@ def exec(pgm, start):
             if f3 == 0x0:
                 val = r2 + (f7 << 5)
                 print(f"jalr r{rd} = PC+4, PC = r{r1} + {hex(val)}")
+        # jal
+        elif (op == 0b1101111):
+            val = (f3 + (r1 << 3)) << 12 # bits 12-19
+            if r2 % 1:
+                val |= (1 << 11) # bit 11
+            val += (r2 & 0b11110) + ((f7 & 0b111111) << 5) # bits 1-10
+            if f7 & (1 << 6):
+                val |= (1 << 20) # bit 20
+            print(f"jal r{rd} = PC+4, PC = r{r1} + {hex(val)}")
         # auipc
         elif (op == 0b0010111):
             val = instr & (1 << 12)
