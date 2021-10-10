@@ -44,7 +44,7 @@ def store(val32, dest, n):
         val32 = val32 >> 8
 
 def exec(pgm, start):
-    global PC
+    global PC, RUN
     if len(pgm) % 4 != 0:
         print("Pgm must be 32 bits aligned")
         return -1
@@ -61,8 +61,9 @@ def exec(pgm, start):
     dump(MEM)
 
 def exec_instr(instr):
-    global PC, REG, MEM
-    dump(MEM)
+    global PC, REG, MEM,RUN
+    print(hex(PC), end=" ")
+    # dump(MEM)
     op = (instr      ) & 0b1111111
     rd = (instr >> 7 ) & 0b11111
     f3 = (instr >> 12) & 0b111
@@ -148,7 +149,6 @@ def exec_instr(instr):
         if r2 & 1:
             val |= (1 << 11) # bit 11
         val += (r2 & 0b11110) + ((f7 & 0b111111) << 5) # bits 1-10
-        print(hex(val))
         if f7 & (1 << 6):
             val |= (1 << 20) # bit 20
         val = extsgn(val, 21)
@@ -172,8 +172,11 @@ def exec_instr(instr):
         if f3 == 0 & f7 == 0:
             if r2 == 0:
                 print("ecall")
+                if REG[17] == 93: # call exit
+                    # dump(MEM)
+                    RUN = False
             elif r2 == 1:
-                print("ebreak")
+                print(f"ebreak")
                 RUN = False
             else:
                 print(f"Unknown op={bin(op)}, f3={hex(f3)}, f7={hex(f7)}, rd={rd}, r1={r1}, r2={r2}")
@@ -192,24 +195,22 @@ def main():
             if isinstance(section, SymbolTableSection):
                 for symbol in section.iter_symbols():
                     SYM[symbol.name] = symbol['st_value']
-        print(SYM)
 
         textSec = elffile.get_section_by_name('.text')
         start = textSec.header['sh_addr']
         pgm = bytearray(textSec.data())
-        print(hex(start), pgm)
 
         dataSec = elffile.get_section_by_name('.data')
         start_data = dataSec.header['sh_addr']
         size_data = dataSec.header['sh_size']
         data = bytearray(dataSec.data())
-        print(hex(start_data), data, size_data)
 
     for addr in range(size_data):
         MEM[start_data + addr] = data[addr]
 
+    print(SYM)
     ## SP
-    #REG[2] = 0xF0001000
+    REG[2] = 0xF0001000
     ## GP
     REG[3] = SYM["__global_pointer$"]
 
