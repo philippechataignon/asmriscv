@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 import sys
-from intelhex import IntelHex
+from elftools.elf.elffile import ELFFile
+from elftools.elf.sections import Section,SymbolTableSection
+# from intelhex import IntelHex
 
 MEM = dict()
+SYM = dict()
 REG = [0] * 32
 PC = 0
 RUN = True
@@ -18,9 +21,12 @@ def unsgn(x, n=32):
     return x
 
 def dump(mem):
-    print(hex(PC),":", [hex(x) for x in REG])
-    for k in sorted(mem.keys()):
-        print(f"[{hex(k)}]: {chr(mem[k])} - {hex(mem[k])}")
+    print(hex(PC),":", [f"{i}: {hex(x)}" for i, x in enumerate(REG)])
+    for i,k in enumerate(sorted(mem.keys())):
+        print(f"[{hex(k)}]: {hex(mem[k])}", end = "  -  ")
+        if i % 8 == 7:
+            print()
+    print()
 
 def load(src, n, u=False):
     val = 0
@@ -64,7 +70,7 @@ def exec_instr(instr):
     r2 = (instr >> 20) & 0b11111
     f7 = (instr >> 25) & 0b1111111
 
-    # print(hex(start + addr), hex(instr), bin(instr))
+    # print(hex(PC), hex(instr), bin(instr))
     # print(f"op={bin(op)}, f3={hex(f3)}, f7={hex(f7)}, rd={rd}, r1={r1}, r2={r2}")
 
     # arith (R)
@@ -138,12 +144,14 @@ def exec_instr(instr):
             return
     # jal (J)
     elif (op == 0b1101111):
-        val = (f3 + (r1 << 3)) << 12 # bits 12-19
+        val = (f3 << 12) + (r1 << 15) # bits 12-19
         if r2 & 1:
             val |= (1 << 11) # bit 11
         val += (r2 & 0b11110) + ((f7 & 0b111111) << 5) # bits 1-10
+        print(hex(val))
         if f7 & (1 << 6):
             val |= (1 << 20) # bit 20
+        val = extsgn(val, 21)
         print(f"jal r{rd} = PC + 4, PC += {hex(val)}")
         if rd > 0:
             REG[rd] = PC + 4
@@ -176,22 +184,37 @@ def exec_instr(instr):
     PC += 4
 
 def main():
-    global MEM, REG
-    ih = IntelHex()
-    ih.loadhex(sys.argv[1])
-    s = ih.segments()
-    pgm = ih[s[0][0]:s[0][1]].tobinarray()
-    data = ih[s[1][0]:s[1][1]]
+    global MEM, REG, SYM
 
-    for addr in range(s[1][0], s[1][1]):
-        MEM[addr] = ih[addr]
+    with open(sys.argv[1], 'rb') as file:
+        elffile = ELFFile(file)
+        for section in elffile.iter_sections():
+            if isinstance(section, SymbolTableSection):
+                for symbol in section.iter_symbols():
+                    SYM[symbol.name] = symbol['st_value']
+        print(SYM)
 
-    # SP
-    REG[2] = 0xF000FFFF
-    # GP
-    REG[3] = 0xF000EFFF
+        textSec = elffile.get_section_by_name('.text')
+        start = textSec.header['sh_addr']
+        pgm = bytearray(textSec.data())
+        print(hex(start), pgm)
 
-    exec(pgm, s[0][0])
+        dataSec = elffile.get_section_by_name('.data')
+        start_data = dataSec.header['sh_addr']
+        size_data = dataSec.header['sh_size']
+        data = bytearray(dataSec.data())
+        print(hex(start_data), data, size_data)
+
+    for addr in range(size_data):
+        MEM[start_data + addr] = data[addr]
+
+    ## SP
+    #REG[2] = 0xF0001000
+    ## GP
+    REG[3] = SYM["__global_pointer$"]
+
+    dump(MEM)
+    exec(pgm, start)
 
     #store(0x9fff8000, 0x20000000, 4)
     #val = load(0x20000000, 1)

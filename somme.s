@@ -14,7 +14,6 @@ my_copy:
     ret
 
     .data
-    .align  3
 source:
     .string "source"
 dest:
