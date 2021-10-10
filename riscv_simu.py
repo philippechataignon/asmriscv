@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+import logging
 import sys
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import Section, SymbolTableSection
+
+logger = logging.getLogger(__name__)
 
 # from intelhex import IntelHex
 
@@ -65,10 +68,10 @@ def exec(pgm, start):
         addr = PC - start
         try:
             instr = (
-                (pgm[addr + 3] << 24)
-                + (pgm[addr + 2] << 16)
+                pgm[addr]
                 + (pgm[addr + 1] << 8)
-                + pgm[addr]
+                + (pgm[addr + 2] << 16)
+                + (pgm[addr + 3] << 24)
             )
         except IndexError:
             break
@@ -80,7 +83,6 @@ def exec(pgm, start):
 def exec_instr(instr):
     global PC, REG, MEM, RUN
     print(hex(PC), end=" ")
-    dump(MEM)
     op = (instr) & 0b1111111
     rd = (instr >> 7) & 0b11111
     f3 = (instr >> 12) & 0b111
@@ -191,7 +193,12 @@ def exec_instr(instr):
         if f3 == 0 & f7 == 0:
             if r2 == 0:
                 print("ecall")
-                if REG[17] == 93:  # call exit
+                if REG[17] == 64:  # call write
+                    ptr = REG[11]
+                    while MEM[ptr] != 0:
+                        print(chr(MEM[ptr]), end="")
+                        ptr += 1
+                elif REG[17] == 93:  # call exit
                     # dump(MEM)
                     RUN = False
             elif r2 == 1:
@@ -238,22 +245,8 @@ def main():
     ## GP
     REG[3] = SYM["__global_pointer$"]
 
-    dump(MEM)
     exec(pgm, start)
 
-    # store(0x9fff8000, 0x20000000, 4)
-    # val = load(0x20000000, 1)
-    # print(val)
-    # val = load(0x20000001, 1)
-    # print(val)
-    # val = load(0x20000002, 1)
-    # print(val)
-    # val = load(0x20000000, 2)
-    # print(val)
-    # val = load(0x20000000, 4)
-    # print(hex(val))
-    # dump(MEM)
-
-
 if __name__ == "__main__":
+    logging.basicConfig()
     main()
