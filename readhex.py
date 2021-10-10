@@ -12,10 +12,30 @@ def extsgn(x, n = 12):
         x = x - (1 << n)
     return x
 
+def unsgn(x, n=32):
+    if x < 0:
+        x = x + (1 << n)
+    return x
+
 def dump(mem):
     print(hex(PC),":", [hex(x) for x in REG])
     for k in sorted(mem.keys()):
         print(f"[{hex(k)}]: {chr(mem[k])} - {hex(mem[k])}")
+
+def load(src, n, u=False):
+    val = 0
+    for i in range(n):
+        val = val << 8
+        val += MEM[src + n - 1 - i]
+    if u:
+        val = unsgn(val, n)
+    return val
+
+def store(val32, dest, n):
+    for i in range(n):
+        val = val32 & 0xff
+        MEM[dest + i] = val
+        val32 = val32 >> 8
 
 def exec(pgm, start):
     global PC
@@ -51,26 +71,43 @@ def exec_instr(instr):
     if (op == 0b0110011):
         if f3 == 0x0 and f7 == 0x00:
             print(f"add r{rd} <- r{r1} + r{r2}")
-            REG[rd] = REG[r1] + REG[r2]
+            if rd > 0:
+                REG[rd] = REG[r1] + REG[r2]
     # arith imm (I)
     elif (op == 0b0010011):
         if f3 == 0x0:
             val = instr >> 20
             val = extsgn(val)
             print(f"addi r{rd} <- r{r1} + {hex(val)}")
-            REG[rd] = REG[r1] + val
+            if rd > 0:
+                REG[rd] = REG[r1] + val
     # load (I)
     elif (op == 0b0000011):
         val = instr >> 20
         val = extsgn(val)
         print(f"load{f3} r{rd} <- {val}(r{r1})")
-        REG[rd] = MEM[REG[r1] + val]
+        if rd > 0:
+            if f3 == 0:
+                REG[rd] = load(REG[r1] + val, 1)
+            elif f3 == 1:
+                REG[rd] = load(REG[r1] + val, 2)
+            elif f3 == 2:
+                REG[rd] = load(REG[r1] + val, 4)
+            elif f3 == 4:
+                REG[rd] = load(REG[r1] + val, 1, u = True)
+            elif f3 == 5:
+                REG[rd] = load(REG[r1] + val, 2, u = True)
     # store (S)
     elif (op == 0b0100011):
         val = rd + (f7 << 5)
         val = extsgn(val)
         print(f"store{f3} r{r2} -> {val}(r{r1})")
-        MEM[REG[r1] + val] = REG[r2]
+        if f3 == 0:
+            store(REG[r2], REG[r1] + val, 1)
+        elif f3 == 1:
+            store(REG[r2], REG[r1] + val, 2)
+        elif f3 == 2:
+            store(REG[r2], REG[r1] + val, 4)
     # test (B)
     elif (op == 0b1100011):
         val = (rd >> 1) + ((f7 & 0b111111) << 4) # bits 1:10
@@ -81,7 +118,12 @@ def exec_instr(instr):
         val = extsgn(val, 12)
         val = val << 1 # bit 0 is always 0
         print(f"br{f3} r{r1} <-> r{r2} PC + {hex(val)}")
-        if REG[r1] != 0:
+        if (f3 == 0 and REG[r1] == REG[r2])         \
+           or (f3 == 1 and REG[r1] != REG[r2])      \
+           or (f3 == 4 and REG[r1] < REG[r2])       \
+           or (f3 == 5 and REG[r1] >= REG[r2])      \
+           or (f3 == 6 and unsgn(REG[r1]) < unsgn(REG[r2]))       \
+           or (f3 == 7 and unsgn(REG[r1]) >= unsgn(REG[r2])):
             PC += val
             return
     # jalr (I)
@@ -90,7 +132,8 @@ def exec_instr(instr):
             val = instr >> 20
             val = extsgn(val)
             print(f"jalr r{rd} = PC+4, PC = r{r1} + {hex(val)}")
-            REG[rd] = PC + 4
+            if rd > 0:
+                REG[rd] = PC + 4
             PC = REG[r1] + val
             return
     # jal (J)
@@ -102,7 +145,8 @@ def exec_instr(instr):
         if f7 & (1 << 6):
             val |= (1 << 20) # bit 20
         print(f"jal r{rd} = PC + 4, PC += {hex(val)}")
-        REG[rd] = PC + 4
+        if rd > 0:
+            REG[rd] = PC + 4
         PC += val
         return
     # lui (U)
@@ -113,7 +157,8 @@ def exec_instr(instr):
     elif (op == 0b0010111):
         val = (instr >> 12) << 12
         print(f"auipc r{rd} <- PC + {hex(val)}")
-        REG[rd] = PC + val
+        if rd > 0:
+            REG[rd] = PC + val
     # ecall/ebreak
     elif (op == 0b1110011):
         if f3 == 0 & f7 == 0:
@@ -131,6 +176,7 @@ def exec_instr(instr):
     PC += 4
 
 def main():
+    global MEM, REG
     ih = IntelHex()
     ih.loadhex(sys.argv[1])
     s = ih.segments()
@@ -140,7 +186,25 @@ def main():
     for addr in range(s[1][0], s[1][1]):
         MEM[addr] = ih[addr]
 
+    # SP
+    REG[2] = 0xF000FFFF
+    # GP
+    REG[3] = 0xF000EFFF
+
     exec(pgm, s[0][0])
+
+    #store(0x9fff8000, 0x20000000, 4)
+    #val = load(0x20000000, 1)
+    #print(val)
+    #val = load(0x20000001, 1)
+    #print(val)
+    #val = load(0x20000002, 1)
+    #print(val)
+    #val = load(0x20000000, 2)
+    #print(val)
+    #val = load(0x20000000, 4)
+    #print(hex(val))
+    #dump(MEM)
 
 if __name__ == '__main__':
     main()
