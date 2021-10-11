@@ -292,6 +292,8 @@ def exec_instr(instr):
     elif op == 0b0110111:
         val = (instr >> 12) << 12
         print(f"lui r{rd} <- {hex(val)}")
+        if rd > 0:
+            REG[rd] = val
     # auipc (U)
     elif op == 0b0010111:
         val = (instr >> 12) << 12
@@ -306,7 +308,7 @@ def exec_instr(instr):
                 if REG[17] == 64:  # call write
                     ptr = REG[11]
                     n = REG[12]
-                    print(">>> ", end="")
+                    print(f"[{n}]>>> ", end="")
                     while n > 0 and MEM[ptr] != 0:
                         print(chr(MEM[ptr]), end="")
                         ptr += 1
@@ -327,6 +329,7 @@ def exec_instr(instr):
         )
 
     # next instruction
+    dump(MEM)
     PC += 4
 
 
@@ -353,7 +356,7 @@ def main():
             for addr in range(size_data):
                 MEM[start_data + addr] = data[addr]
 
-    print(SYM)
+    print({k:hex(v) for k,v in SYM.items()})
     ## SP
     REG[2] = 0xF0001000
     ## GP

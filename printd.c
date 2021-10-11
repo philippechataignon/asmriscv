@@ -27,8 +27,8 @@ void num_print(long num){
 }
 
 int main(){
-    int arr[3] = {12345678, -12345678, 0};
-    for (int i=0; i < 3; i++){
+    int arr[] = {-1234567, 0};
+    for (int i=0; i < 2; i++){
         num_print(arr[i]);
     }
     return 0;
