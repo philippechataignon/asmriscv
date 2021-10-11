@@ -14,9 +14,9 @@ inline long asm_write(const char msg[], long len)
     return a0;
 }
 
-int _start()
-{
-    static const char msg[] = "Hello World!";
-    asm_write(msg, STRLEN(msg));
-    return 0;
-}
+//int _start()
+//{
+//    static const char msg[] = "Hello World!";
+//    asm_write(msg, STRLEN(msg));
+//    return 0;
+//}

@@ -99,14 +99,124 @@ def exec_instr(instr):
             print(f"add r{rd} <- r{r1} + r{r2}")
             if rd > 0:
                 REG[rd] = REG[r1] + REG[r2]
+        elif f3 == 0x0 and f7 == 0x20:
+            print(f"sub r{rd} <- r{r1} - r{r2}")
+            if rd > 0:
+                REG[rd] = REG[r1] - REG[r2]
+        elif f3 == 0x4 and f7 == 0x00:
+            print(f"xor r{rd} <- r{r1} ^ r{r2}")
+            if rd > 0:
+                REG[rd] = REG[r1] ^ REG[r2]
+        elif f3 == 0x6 and f7 == 0x00:
+            print(f"or r{rd} <- r{r1} | r{r2}")
+            if rd > 0:
+                REG[rd] = REG[r1] | REG[r2]
+        elif f3 == 0x7 and f7 == 0x00:
+            print(f"and r{rd} <- r{r1} & r{r2}")
+            if rd > 0:
+                REG[rd] = REG[r1] & REG[r2]
+        elif f3 == 0x1 and f7 == 0x00:
+            print(f"sll r{rd} <- r{r1} << r{r2}")
+            if rd > 0:
+                REG[rd] = REG[r1] << REG[r2]
+        elif f3 == 0x5 and f7 == 0x00:
+            print(f"srl r{rd} <- r{r1} >> r{r2}")
+            if rd > 0:
+                REG[rd] = REG[r1] >> REG[r2]
+        elif f3 == 0x5 and f7 == 0x20:
+            print(f"sra r{rd} <- r{r1} >> r{r2}")
+            if rd > 0:
+                msb = 1 if REG[r1] & (1 << 32) else 0
+                REG[rd] = REG[r1] >> REG[r2]
+                if msb:
+                    REG[rd] |= (1 << 32)
+        elif f3 == 0x2 and f7 == 0x00:
+            print(f"slt r{rd} <- r{r1} < r{r2}")
+            if rd > 0:
+                REG[rd] = 1 if REG[r1] < REG[r2] else 0
+        elif f3 == 0x3 and f7 == 0x00:
+            print(f"sltu r{rd} <- r{r1} < r{r2}")
+            if rd > 0:
+                REG[rd] = 1 if unsgn(REG[r1]) < unsgn(REG[r2]) else 0
+        elif f3 == 0x0 and f7 == 0x01:
+            print(f"mul r{rd} <- r{r1} * r{r2}")
+            if rd > 0:
+                REG[rd] = (REG[r1] * REG[r2]) & 0xffffffff
+        elif f3 == 0x1 and f7 == 0x01:
+            print(f"mulh r{rd} <- r{r1} * r{r2}")
+            if rd > 0:
+                REG[rd] = (REG[r1] * REG[r2]) >> 32
+        elif f3 == 0x2 and f7 == 0x01:
+            print(f"mulsu r{rd} <- r{r1} * r{r2}")
+            if rd > 0:
+                REG[rd] = (REG[r1] * unsgn(REG[r2])) >> 32
+        elif f3 == 0x3 and f7 == 0x01:
+            print(f"mulu r{rd} <- r{r1} * r{r2}")
+            if rd > 0:
+                REG[rd] = (unsgn(REG[r1]) * unsgn(REG[r2])) >> 32
+        elif f3 == 0x4 and f7 == 0x01:
+            print(f"div r{rd} <- r{r1} / r{r2}")
+            if rd > 0:
+                REG[rd] = REG[r1] // REG[r2]
+        elif f3 == 0x5 and f7 == 0x01:
+            print(f"divu r{rd} <- r{r1} / r{r2}")
+            if rd > 0:
+                REG[rd] = unsgn(REG[r1]) // unsgn(REG[r2])
+        elif f3 == 0x6 and f7 == 0x01:
+            print(f"rem r{rd} <- r{r1} % r{r2}")
+            if rd > 0:
+                REG[rd] = REG[r1] % REG[r2]
+        elif f3 == 0x7 and f7 == 0x01:
+            print(f"remu r{rd} <- r{r1} % r{r2}")
+            if rd > 0:
+                REG[rd] = unsgn(REG[r1]) % unsgn(REG[r2])
+        else:
+            print(
+                f"Unknown arith op={bin(op)}, f3={hex(f3)}, f7={hex(f7)}, rd={rd}, r1={r1}, r2={r2}"
+            )
     # arith imm (I)
     elif op == 0b0010011:
+        val = instr >> 20
+        val = extsgn(val)
         if f3 == 0x0:
-            val = instr >> 20
-            val = extsgn(val)
             print(f"addi r{rd} <- r{r1} + {hex(val)}")
             if rd > 0:
                 REG[rd] = REG[r1] + val
+        elif f3 == 0x4 and f7 == 0x00:
+            print(f"xori r{rd} <- r{r1} - {hex(val)}")
+            if rd > 0:
+                REG[rd] = REG[r1] ^ val
+        elif f3 == 0x6 and f7 == 0x00:
+            print(f"ori r{rd} <- r{r1} - {hex(val)}")
+            if rd > 0:
+                REG[rd] = REG[r1] | val
+        elif f3 == 0x7 and f7 == 0x00:
+            print(f"andi r{rd} <- r{r1} - {hex(val)}")
+            if rd > 0:
+                REG[rd] = REG[r1] & val
+        elif f3 == 0x1 and f7 == 0x00:
+            print(f"slli r{rd} <- r{r1} << {hex(val)}")
+            if rd > 0:
+                REG[rd] = REG[r1] << val
+        elif f3 == 0x5 and f7 == 0x00:
+            print(f"srli r{rd} <- r{r1} >> {hex(val)}")
+            if rd > 0:
+                REG[rd] = REG[r1] >> val
+        elif f3 == 0x5 and f7 == 0x20:
+            print(f"srai r{rd} <- r{r1} >> {hex(val)}")
+            if rd > 0:
+                msb = 1 if REG[r1] & (1 << 32) else 0
+                REG[rd] = REG[r1] >> val
+                if msb:
+                    REG[rd] |= (1 << 32)
+        elif f3 == 0x2 and f7 == 0x00:
+            print(f"slti r{rd} <- r{r1} < {hex(val)}")
+            if rd > 0:
+                REG[rd] = 1 if REG[r1] < val else 0
+        elif f3 == 0x3 and f7 == 0x00:
+            print(f"sltiu r{rd} <- r{r1} < {hex(val)}")
+            if rd > 0:
+                REG[rd] = 1 if unsgn(REG[r1]) < val else 0
     # load (I)
     elif op == 0b0000011:
         val = instr >> 20
@@ -235,12 +345,13 @@ def main():
         pgm = bytearray(textSec.data())
 
         dataSec = elffile.get_section_by_name(".data")
-        start_data = dataSec.header["sh_addr"]
-        size_data = dataSec.header["sh_size"]
-        data = bytearray(dataSec.data())
+        if dataSec is not None:
+            start_data = dataSec.header["sh_addr"]
+            size_data = dataSec.header["sh_size"]
+            data = bytearray(dataSec.data())
 
-    for addr in range(size_data):
-        MEM[start_data + addr] = data[addr]
+            for addr in range(size_data):
+                MEM[start_data + addr] = data[addr]
 
     print(SYM)
     ## SP
