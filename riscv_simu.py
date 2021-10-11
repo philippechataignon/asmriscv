@@ -195,9 +195,12 @@ def exec_instr(instr):
                 print("ecall")
                 if REG[17] == 64:  # call write
                     ptr = REG[11]
-                    while MEM[ptr] != 0:
+                    n = REG[12]
+                    print(">>> ", end="")
+                    while n > 0 and MEM[ptr] != 0:
                         print(chr(MEM[ptr]), end="")
                         ptr += 1
+                        n -= 1
                 elif REG[17] == 93:  # call exit
                     # dump(MEM)
                     RUN = False

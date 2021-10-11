@@ -1,7 +1,10 @@
-#    .globl _start
-#    .globl asm_strlen
-#    .globl asm_print
-#    .globl asm_strcpy
+    .globl _start
+    .globl asm_strlen
+    .globl asm_print
+    .globl asm_strcpy
+    .globl src
+    .globl dest
+
 
     .set    write,64
     .equ    exit,93
@@ -10,7 +13,7 @@
     .text
     .align  1
  
-start:
+_start:
     la      a0,dest
     jal     asm_print   
   
