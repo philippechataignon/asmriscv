@@ -6,7 +6,7 @@ int asm_strcpy(char*, char*);
 
 int main()
 {
-    char* str = "Essai\n";
+    char* str = "Essai de copie d'une chaîne\n";
     char* dest = (char*) malloc(256);
     asm_strcpy(str, dest);
     asm_print(dest);
