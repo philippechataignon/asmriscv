@@ -1,4 +1,3 @@
-//__attribute__((always_inline)) inline long asm_puts(const char msg[], long len)
 inline long asm_puts(const char msg[], long len)
 {
 	register long a0 asm ("a0") = (long)1;
@@ -13,11 +12,3 @@ inline long asm_puts(const char msg[], long len)
     );
     return a0;
 }
-
-//#define STRLEN(s) sizeof(s)/sizeof(s[0])
-//int main()
-//{
-//    static const char msg[] = "Hello World!\n";
-//    int ret = asm_write(msg, STRLEN(msg));
-//    return ret;
-//}

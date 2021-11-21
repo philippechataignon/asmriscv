@@ -1,27 +1,48 @@
 CC=riscv64-linux-gnu-gcc
 AS=riscv64-linux-gnu-as
 LD=riscv64-linux-gnu-ld
-CFLAGS=
-ASFLAGS=
+CFLAGS=-O2
+ASFLAGS=-a
+
+src=$(wildcard *.c)
+obj=$(src:.c=.o)
+target=hello helloworld printd read
 
 %.o: %.s
-	$(AS) -o $@ $< $(ASFLAGS)
+	$(AS) -c -o $@ $< $(ASFLAGS)
 
-ODIR=obj
-
-_OBJ = helloworld.o
-OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
-
-$(ODIR)/%.o: %.c
+%.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-$(ODIR)/%.o: %.s
-	$(CC) -c -o $@ $< $(CFLAGS)
+%.o: %.S
+	$(CC) -Wa,-a -c -o $@ $< $(CFLAGS)
 
-helloworld: $(OBJ)
-	$(CC) -nostdlib -static -o $@ $^ $(CFLAGS)
+all: $(target)
+
+helloworld: helloworld.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+hello: hello.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+printd: printd.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+read: read.o
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core
+	rm -f *.o *~ core $(target)
+
+#src = $(wildcard *.c)
+#obj = $(src:.c=.o)
+#
+#LDFLAGS = -lGL -lglut -lpng -lz -lm
+#
+#myprog: $(obj)
+#
+#.PHONY: clean
+#clean:
+#	rm -f $(obj) myprog
