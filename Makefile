@@ -1,27 +1,25 @@
 CC=riscv64-linux-gnu-gcc
 AS=riscv64-linux-gnu-as
 LD=riscv64-linux-gnu-ld
-CFLAGS=
+LDFLAGS=
 ASFLAGS=
 
 %.o: %.s
-	$(AS) -o $@ $< $(ASFLAGS)
+	$(AS) $(ASFLAGS) -o $@ $<
+%: %.o
+	$(LD) $(LDFLAGS) -o $@ $<
 
-ODIR=obj
+src=$(wildcard *.s)
+obj=$(patsubst %.s,%.o,$(src))
+target=$(patsubst %.s,%,$(src))
 
-_OBJ = helloworld.o
-OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+all:$(target) $(obj)
 
-$(ODIR)/%.o: %.c
-	$(CC) -c -o $@ $< $(CFLAGS)
 
-$(ODIR)/%.o: %.s
-	$(CC) -c -o $@ $< $(CFLAGS)
-
-helloworld: $(OBJ)
-	$(CC) -nostdlib -static -o $@ $^ $(CFLAGS)
+#helloworld: $(OBJ)
+#	$(CC) -nostdlib -static -o $@ $^ $(CFLAGS)
 
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core
+	rm -f $(obj) $(target)

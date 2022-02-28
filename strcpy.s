@@ -1,11 +1,11 @@
 # strcpy en assembleur Risc-V,d'après Patterson et Hennessy
-    .global main
-    .equ    write,64
-    .equ    exit,93
 
-    .text
+.global _start
+write = 64
+exit = 93
 
-main:
+.text
+_start:
     li   t0,0          # i <- 0+0
     la   a2,origine
     la   a3,destination
@@ -27,12 +27,8 @@ L2:
     li   a7,exit            # le code de commande 93 
     ecall                   # Appel Linux pour finir
 
-    .data
+.data
 
-origine:
-    .string	"initiations\n"
-    .equ    len,. - origine
-
-destination:
-    .string "destination\n"	
-
+origine: .string "initiations\n"
+len = . - origine
+destination: .string "destination\n"	

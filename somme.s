@@ -2,6 +2,8 @@
 	.option pic
 	.text
 	.align	1
+	.globl	_start
+_start:
 	.globl	somme
 	.type	somme, @function
 somme:
